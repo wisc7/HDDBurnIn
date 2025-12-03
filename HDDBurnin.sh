@@ -78,7 +78,8 @@ if $RUN_BADBLOCKS; then
   for d in "${DRIVES[@]}"; do
     name=$(basename $d)
     echo "Starting badblocks on $d..."
-    nohup badblocks -sv $d > $LOGDIR/${name}_badblocks.log 2>&1 &
+    # nohup badblocks -sv $d > $LOGDIR/${name}_badblocks.log 2>&1 &
+    nohup badblocks -b 8192 -sv $d > $LOGDIR/${name}_badblocks.log 2>&1 &
   done
   wait
 fi
