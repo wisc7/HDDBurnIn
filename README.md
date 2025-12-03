@@ -10,10 +10,10 @@ then
 then
  does a fio stress test
 
- to execuite run:
+ Usage:
  edit the runtime options in the script for the tests you want to run (recomend all true)
 
- then run:
+ then run the command:
  nohup ./HDDBurnin.sh > /var/log/HDDBurninmaster.log 2>&1 &
 
 you can check the progress of the short/long smartctl by running
