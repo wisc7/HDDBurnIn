@@ -110,24 +110,32 @@ fi
 
 # === Phase 3: Badblocks ===
 if $RUN_BADBLOCKS; then
+  PIDS=()
   for d in "${DRIVES[@]}"; do
     name=$(basename $d)
     echo "Starting badblocks on $d..."
-    nohup badblocks -b 8192 -sv $d > $LOGDIR/${name}_badblocks.log 2>&1 &
+    badblocks -b 8192 -sv $d > $LOGDIR/${name}_badblocks.log 2>&1 &
+    PIDS+=($!)
   done
-  wait
+  for pid in "${PIDS[@]}"; do
+    wait $pid
+  done
 fi
 
 # === Phase 4: fio stress test ===
 if $RUN_FIO; then
+  PIDS=()
   for d in "${DRIVES[@]}"; do
     name=$(basename $d)
     echo "Starting fio stress test on $d..."
-    nohup fio --name=burnin --filename=$d --rw=randrw --bs=4k \
-              --size=20G --numjobs=4 --runtime=21600 --group_reporting \
-              > $LOGDIR/${name}_fio.log 2>&1 &
+    fio --name=burnin --filename=$d --rw=randrw --bs=4k \
+        --size=20G --numjobs=4 --runtime=21600 --group_reporting \
+        > $LOGDIR/${name}_fio.log 2>&1 &
+    PIDS+=($!)
   done
-  wait
+  for pid in "${PIDS[@]}"; do
+    wait $pid
+  done
 fi
 
 echo "Burn-in complete. Logs are in $LOGDIR"
