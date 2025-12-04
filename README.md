@@ -1,6 +1,7 @@
 # HDDBurnIn
 
-a script to run a burn in for a new hdd,
+a script to run a burn in for a new hdd
+
 runs 
  smartctl -t short
 then
@@ -11,6 +12,11 @@ then
  does a fio stress test
 
  Usage:
+please ensure fio is installed prior to running these scripts
+apt update
+apt install fio
+
+ 
  edit the runtime options in the script for the tests you want to run (recomend all true)
 
  then run the command:
