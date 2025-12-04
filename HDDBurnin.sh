@@ -11,8 +11,8 @@ TEMP_THRESHOLD=50
 CRIT_THRESHOLD=55
 
 # Runtime options (default: all enabled)
-RUN_SHORT=false
-RUN_LONG=false
+RUN_SHORT=true
+RUN_LONG=true
 RUN_BADBLOCKS=true
 RUN_FIO=true
 
@@ -50,6 +50,7 @@ monitor_temps() {
 
 # Start temperature monitoring in background
 monitor_temps &
+MONITOR_PID=$!
 
 # === Phase 1: SMART Short Test ===
 if $RUN_SHORT; then
@@ -57,7 +58,24 @@ if $RUN_SHORT; then
     name=$(basename $d)
     echo "Starting SMART short test on $d..."
     smartctl -t short $d
-    sleep 180  # wait ~3 minutes
+  done
+
+  echo "Polling for SMART short test completion..."
+  while true; do
+    unfinished=0
+    for d in "${DRIVES[@]}"; do
+      if smartctl -c $d | grep -q "Self-test routine in progress"; then
+        unfinished=$((unfinished+1))
+      fi
+    done
+    if [ $unfinished -eq 0 ]; then
+      break
+    fi
+    sleep 30  # poll every 30s for short test
+  done
+
+  for d in "${DRIVES[@]}"; do
+    name=$(basename $d)
     smartctl -a $d > $LOGDIR/${name}_smart_short.log
   done
 fi
@@ -69,8 +87,25 @@ if $RUN_LONG; then
     echo "Starting SMART long test on $d..."
     smartctl -t long $d
   done
-  # Wait for long tests to finish (WD Gold ~36h)
-  echo "SMART long tests running in background. Check progress with smartctl -c /dev/sdX"
+
+  echo "Polling for SMART long test completion..."
+  while true; do
+    unfinished=0
+    for d in "${DRIVES[@]}"; do
+      if smartctl -c $d | grep -q "Self-test routine in progress"; then
+        unfinished=$((unfinished+1))
+      fi
+    done
+    if [ $unfinished -eq 0 ]; then
+      break
+    fi
+    sleep 600  # poll every 10 minutes for long test
+  done
+
+  for d in "${DRIVES[@]}"; do
+    name=$(basename $d)
+    smartctl -a $d > $LOGDIR/${name}_smart_long.log
+  done
 fi
 
 # === Phase 3: Badblocks ===
@@ -78,7 +113,6 @@ if $RUN_BADBLOCKS; then
   for d in "${DRIVES[@]}"; do
     name=$(basename $d)
     echo "Starting badblocks on $d..."
-    # nohup badblocks -sv $d > $LOGDIR/${name}_badblocks.log 2>&1 &
     nohup badblocks -b 8192 -sv $d > $LOGDIR/${name}_badblocks.log 2>&1 &
   done
   wait
@@ -97,3 +131,6 @@ if $RUN_FIO; then
 fi
 
 echo "Burn-in complete. Logs are in $LOGDIR"
+
+# Stop temperature monitor
+kill $MONITOR_PID
